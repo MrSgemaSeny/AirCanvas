@@ -4,5 +4,13 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #000;
+  background-color: #09090b;
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
 }

@@ -11,8 +11,12 @@ interface UseDrawingProps {
 }
 
 export function useDrawing({ canvasRef, color, brushSize, brushStyle = 'pen' }: UseDrawingProps) {
-  // Последняя точка — чтобы рисовать линию, а не точки
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  // Для плавности: Quadratic Curve
+  const pointsRef = useRef<{ x: number; y: number }[]>([]);
+  // Для фильтрации дрожания руки: EMA (Exponential Moving Average)
+  const smoothedPointRef = useRef<{ x: number; y: number } | null>(null);
+
+  const EMA_ALPHA = 0.4; // Коэффициент сглаживания (0..1). Меньше = плавнее, но с задержкой
 
   const handleHandData = useCallback((data: HandData) => {
     const canvas = canvasRef.current;
@@ -24,71 +28,102 @@ export function useDrawing({ canvasRef, color, brushSize, brushStyle = 'pen' }: 
     // Жест "кулак" — очистить холст
     if (data.gesture === 'clear') {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      lastPointRef.current = null;
+      pointsRef.current = [];
+      smoothedPointRef.current = null;
       return;
     }
 
     // Жест "стоп" или "none" — поднять перо
     if (!data.drawing) {
-      lastPointRef.current = null;
+      pointsRef.current = [];
+      smoothedPointRef.current = null;
       return;
     }
 
-    // Конвертируем нормализованные координаты (0-1) в пиксели canvas
-    // Зеркалим по X — вебкамера отражает как зеркало
-    const x = (1 - data.x) * canvas.width;
-    const y = data.y * canvas.height;
+    // Сырые координаты
+    const rawX = (1 - data.x) * canvas.width;
+    const rawY = data.y * canvas.height;
 
+    // Применяем EMA фильтр для устранения микро-дрожаний
+    let x = rawX;
+    let y = rawY;
+    if (smoothedPointRef.current) {
+      x = smoothedPointRef.current.x + EMA_ALPHA * (rawX - smoothedPointRef.current.x);
+      y = smoothedPointRef.current.y + EMA_ALPHA * (rawY - smoothedPointRef.current.y);
+    }
+    smoothedPointRef.current = { x, y };
     const currentPoint = { x, y };
 
-    if (lastPointRef.current) {
+    pointsRef.current.push(currentPoint);
+    const points = pointsRef.current;
+
+    // Рисуем сглаженную кривую (нужно минимум 3 точки)
+    if (points.length >= 3) {
       ctx.save();
       
-      // Эффекты кисти (Phase 4)
       if (brushStyle === 'glow') {
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = color;
       } else {
         ctx.shadowBlur = 0;
       }
 
       if (brushStyle === 'spray') {
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 25; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const radius = Math.random() * brushSize * 3;
+          const radius = Math.random() * brushSize * 2.5;
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(
             currentPoint.x + Math.cos(angle) * radius,
             currentPoint.y + Math.sin(angle) * radius,
-            1, 0, Math.PI * 2
+            Math.random() * 1.5, 0, Math.PI * 2
           );
           ctx.fill();
         }
       } else {
-        // Рисуем обычную линию от предыдущей точки к текущей
         ctx.beginPath();
         ctx.strokeStyle = color;
         ctx.lineWidth = brushSize;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-        ctx.lineTo(currentPoint.x, currentPoint.y);
+
+        // Перерисовываем последние несколько сегментов как одну кривую Безье
+        const p1 = points[points.length - 3];
+        const p2 = points[points.length - 2];
+        const p3 = points[points.length - 1];
+
+        // Центр между p1 и p2
+        const xc1 = (p1.x + p2.x) / 2;
+        const yc1 = (p1.y + p2.y) / 2;
+        // Центр между p2 и p3
+        const xc2 = (p2.x + p3.x) / 2;
+        const yc2 = (p2.y + p3.y) / 2;
+
+        ctx.moveTo(xc1, yc1);
+        ctx.quadraticCurveTo(p2.x, p2.y, xc2, yc2);
         ctx.stroke();
       }
       
       ctx.restore();
-    }
-
-    // Визуализация руки (Phase 4)
-    if (data.drawing && brushStyle !== 'spray') {
+      
+      // Оставляем только последние точки в памяти для непрерывности
+      if (points.length > 3) {
+        points.shift();
+      }
+    } else if (points.length === 2 && brushStyle !== 'spray') {
+      // Для начала линии
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(x, y, brushSize / 2 + 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    lastPointRef.current = currentPoint;
   }, [canvasRef, color, brushSize, brushStyle]);
 
   const clearCanvas = useCallback(() => {
@@ -96,7 +131,8 @@ export function useDrawing({ canvasRef, color, brushSize, brushStyle = 'pen' }: 
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
-    lastPointRef.current = null;
+    pointsRef.current = [];
+    smoothedPointRef.current = null;
   }, [canvasRef]);
 
   return { handleHandData, clearCanvas };
