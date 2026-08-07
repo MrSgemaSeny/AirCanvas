@@ -10,11 +10,11 @@
 ```
 PROJECT:       Air Canvas
 TRACK:         SIMPLE
-CURRENT PHASE: 1
-CURRENT SUBPHASE: 1.1
+CURRENT PHASE: 5
+CURRENT SUBPHASE: 5.1
 LAST UPDATED:  2026-08-07
-BLOCKER:       нет
-NEXT STEP:     git init, создать структуру папок
+BLOCKER:       Нет
+NEXT STEP:     Финализация, README.md, проверка всех функций.
 ```
 
 ---
@@ -87,7 +87,7 @@ OpenCV window неудобен для UI. React даёт нормальный ca
 │  │           WebSocket Client                    │   │
 │  └──────────────────────────────────────────────┘   │
 └────────────────────────┬────────────────────────────┘
-                         │ ws://localhost:8000/ws
+                         │ ws://localhost:8002/ws
                          │ JSON: {x, y, gesture, drawing}
 ┌────────────────────────▼────────────────────────────┐
 │                  Python (FastAPI)                    │
@@ -319,7 +319,7 @@ def health():
 
 ```bash
 # Запуск
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8002
 ```
 
 ---
@@ -376,7 +376,7 @@ export function useWebSocket(
 
   useEffect(() => {
     const connect = () => {
-      const ws = new WebSocket('ws://localhost:8000/ws');
+      const ws = new WebSocket('ws://localhost:8002/ws');
 
       ws.onopen = () => {
         console.log('WS connected');
@@ -730,7 +730,7 @@ if (data.drawing) {
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --port 8000
+uvicorn main:app --port 8002
 
 ### Frontend
 cd frontend
