@@ -139,7 +139,7 @@ export function AirCanvas() {
       sendFrame(base64);
     };
 
-    frameIntervalRef.current = window.setInterval(sendFrameLoop, 33); // 30 FPS, но с backpressure lock
+    frameIntervalRef.current = window.setInterval(sendFrameLoop, 80); // ~12 FPS, with backpressure lock
     return () => window.clearInterval(frameIntervalRef.current);
   }, [sendFrame]);
 

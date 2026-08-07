@@ -77,8 +77,15 @@ class HandTracker:
         def is_open(tip_idx, pip_idx):
             tip = landmarks[tip_idx]
             pip = landmarks[pip_idx]
-            dist_tip = math.hypot(tip.x - wrist.x, tip.y - wrist.y)
-            dist_pip = math.hypot(pip.x - wrist.x, pip.y - wrist.y)
+            # Используем 3D-дистанцию (x, y, z) для защиты от ракурса (когда палец направлен прямо в камеру)
+            dist_tip = math.sqrt((tip.x - wrist.x)**2 + (tip.y - wrist.y)**2 + (tip.z - wrist.z)**2)
+            dist_pip = math.sqrt((pip.x - wrist.x)**2 + (pip.y - wrist.y)**2 + (pip.z - wrist.z)**2)
+            
+            # Для указательного пальца можно сделать дополнительную проверку по Z
+            # (если кончик сильно ближе к камере, чем костяшка, значит палец вытянут вперед)
+            if tip_idx == 8 and tip.z < pip.z - 0.02:
+                return True
+                
             return dist_tip > dist_pip
 
         index_up = is_open(8, 6)
