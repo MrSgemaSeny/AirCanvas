@@ -25,16 +25,8 @@ export function useDrawing({ canvasRef, color, brushSize, brushStyle = 'pen' }: 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Жест "кулак" — очистить холст
-    if (data.gesture === 'clear') {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      pointsRef.current = [];
-      smoothedPointRef.current = null;
-      return;
-    }
-
-    // Жест "стоп" или "none" — поднять перо
-    if (!data.drawing) {
+    // Жест "стоп", "none", или "clear" (теперь очистка с задержкой) — поднять перо
+    if (!data.drawing || data.gesture === 'clear') {
       pointsRef.current = [];
       smoothedPointRef.current = null;
       return;

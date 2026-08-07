@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import base64
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Dict
 
 @dataclass
 class HandData:
@@ -11,6 +11,8 @@ class HandData:
     y: float           # 0.0 - 1.0
     gesture: str       # "draw" | "stop" | "clear" | "none"
     drawing: bool      # рисовать ли сейчас
+    landmarks: List[Dict[str, float]] = None
+
 
 class HandTracker:
     def __init__(self):
@@ -46,11 +48,14 @@ class HandTracker:
             # Координата кончика указательного пальца (landmark 8)
             index_tip = landmarks[8]
 
+            landmarks_list = [{"x": lm.x, "y": lm.y} for lm in landmarks]
+
             return HandData(
                 x=index_tip.x,
                 y=index_tip.y,
                 gesture=gesture,
-                drawing=(gesture == "draw")
+                drawing=(gesture == "draw"),
+                landmarks=landmarks_list
             )
         except Exception as e:
             print(f"Error processing frame: {e}")

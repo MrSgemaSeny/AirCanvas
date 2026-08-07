@@ -3,6 +3,7 @@ export interface HandData {
   y: number;        // 0.0 - 1.0
   gesture: 'draw' | 'stop' | 'clear' | 'none';
   drawing: boolean;
+  landmarks?: { x: number; y: number }[];
 }
 
 export interface DrawPoint {
