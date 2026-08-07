@@ -43,7 +43,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "x": hand_data.x,
                     "y": hand_data.y,
                     "gesture": hand_data.gesture,
-                    "drawing": hand_data.drawing
+                    "drawing": hand_data.drawing,
+                    "landmarks": hand_data.landmarks
                 }))
 
     except WebSocketDisconnect:

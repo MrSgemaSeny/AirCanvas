@@ -73,7 +73,10 @@ export function AirCanvas() {
     });
   }, []);
 
+  const isProcessingRef = useRef<boolean>(false);
+
   const onHandData = useCallback((data: HandData) => {
+    isProcessingRef.current = false; // Release the lock when response arrives
     setGesture(data.gesture);
     handleHandData(data);
     drawLandmarks(data.landmarks);
@@ -116,21 +119,27 @@ export function AirCanvas() {
   // Отправка кадров
   useEffect(() => {
     const sendFrameLoop = () => {
+      // Если предыдущий кадр еще обрабатывается бэкендом, пропускаем такт
+      if (isProcessingRef.current) return;
+
       const video = videoRef.current;
       if (!video || video.readyState < 2) return;
 
       const tmpCanvas = document.createElement('canvas');
-      tmpCanvas.width = 320;
-      tmpCanvas.height = 240;
+      // Уменьшаем разрешение для ускорения кодирования/отправки
+      tmpCanvas.width = 240;
+      tmpCanvas.height = 180;
       const tmpCtx = tmpCanvas.getContext('2d');
       if (!tmpCtx) return;
 
-      tmpCtx.drawImage(video, 0, 0, 320, 240);
-      const base64 = tmpCanvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+      tmpCtx.drawImage(video, 0, 0, 240, 180);
+      const base64 = tmpCanvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+      
+      isProcessingRef.current = true; // Set lock
       sendFrame(base64);
     };
 
-    frameIntervalRef.current = window.setInterval(sendFrameLoop, 33);
+    frameIntervalRef.current = window.setInterval(sendFrameLoop, 33); // 30 FPS, но с backpressure lock
     return () => window.clearInterval(frameIntervalRef.current);
   }, [sendFrame]);
 

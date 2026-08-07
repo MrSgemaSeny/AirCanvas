@@ -63,20 +63,28 @@ class HandTracker:
 
     def _detect_gesture(self, landmarks) -> str:
         """
-        Определяет жест по положению пальцев.
+        Определяет жест по положению пальцев. Не зависит от поворота кисти.
         Landmark индексы:
-          4  = большой палец (tip)
-          8  = указательный (tip)
-          12 = средний (tip)
-          16 = безымянный (tip)
-          20 = мизинец (tip)
-          Суставы: 6, 10, 14, 18 — средние суставы пальцев
+          0  = запястье (wrist)
+          8  = указательный (tip), 6 = сустав (pip)
+          12 = средний (tip), 10 = сустав (pip)
+          16 = безымянный (tip), 14 = сустав (pip)
+          20 = мизинец (tip), 18 = сустав (pip)
         """
-        # Пальцы "поднят" если tip выше (меньше y) чем средний сустав
-        index_up  = landmarks[8].y  < landmarks[6].y
-        middle_up = landmarks[12].y < landmarks[10].y
-        ring_up   = landmarks[16].y < landmarks[14].y
-        pinky_up  = landmarks[20].y < landmarks[18].y
+        import math
+        wrist = landmarks[0]
+
+        def is_open(tip_idx, pip_idx):
+            tip = landmarks[tip_idx]
+            pip = landmarks[pip_idx]
+            dist_tip = math.hypot(tip.x - wrist.x, tip.y - wrist.y)
+            dist_pip = math.hypot(pip.x - wrist.x, pip.y - wrist.y)
+            return dist_tip > dist_pip
+
+        index_up = is_open(8, 6)
+        middle_up = is_open(12, 10)
+        ring_up = is_open(16, 14)
+        pinky_up = is_open(20, 18)
 
         fingers_up = [index_up, middle_up, ring_up, pinky_up]
         count = sum(fingers_up)
